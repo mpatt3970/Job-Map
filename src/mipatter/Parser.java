@@ -16,6 +16,7 @@ import org.xml.sax.SAXException;
 public class Parser {
 
 	private static final int NUMBER = 25;
+	private static final int UPPER_LIMIT = 500000;
 	private static final String URL_SMALL_BASE = "http://api.indeed.com/ads/apisearch?publisher=1611676990423118&v=2&limit=1&q=";
 	private static final String URL_SEARCH_BASE = "http://api.indeed.com/ads/apisearch?publisher=1611676990423118&latlong=1&v=2&q=";
 
@@ -39,7 +40,12 @@ public class Parser {
 			NodeList nodes = document.getElementsByTagName("totalresults");
 			// turn the string result into a number
 			String n = nodes.item(0).getTextContent();
-			return Integer.parseInt(n);
+			int num = Integer.parseInt(n);
+			if (num > UPPER_LIMIT) {
+				return UPPER_LIMIT;
+			} else {
+				return num;
+			}
 		} catch (SAXException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -60,7 +66,7 @@ public class Parser {
 		String results = "";
 		int current = 0;
 		while (current < totalSize) {
-			System.out.println(current);
+			System.out.println(current + "/" + totalSize);
 			// xml query this url 'constructUrlSearchString(NUMBER, current, queryString);' for latitude and longitude
 			try {
 				// create and open the url
@@ -76,8 +82,11 @@ public class Parser {
 					try {
 						String la = result.getElementsByTagName("latitude").item(0).getTextContent();
 						String lo = result.getElementsByTagName("longitude").item(0).getTextContent();
+						String name = result.getElementsByTagName("jobtitle").item(0).getTextContent();
+						String invalid_pattern = "[^\\w\\s]";
+						String validName = name.replaceAll(invalid_pattern, "");
 						// add a string like \n\t<marker lat="num" long="val"/>
-						results += "\n\t<marker lat=\"" + la + "\" long=\"" + lo + "\"/>";
+						results += constructPlaceMarkString(i + 1 ,validName, la, lo);
 					} catch (NullPointerException e) {
 						// don't care but don't add it
 					}
@@ -97,6 +106,8 @@ public class Parser {
 			}
 			current += NUMBER;
 		}
+		// strip the last new line char
+		results = results.substring(0, results.length() - 1);
 		return results;
 	}
 
@@ -104,12 +115,9 @@ public class Parser {
 		String url = URL_SEARCH_BASE + searchWord + "&limit=" + limitNum + "&start=" + startNum;
 		return url;
 	}
-
-	public String constructLatLngXML() {
-		String xml = "<markers>";
-		xml += getAllResults();
-		xml += "\n</markers>";
-		return xml;
+	
+	public String constructPlaceMarkString(int id, String name, String lat, String lon) {
+		return id + ", " + name + ", " + lat + ", " + lon + "\n";
 	}
 
 }
